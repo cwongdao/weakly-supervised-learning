@@ -1,0 +1,66 @@
+%%writefile /content/deeplab-pytorch/libs/datasets/custom_crack.py
+import os
+import numpy as np
+from PIL import Image
+import torch
+from torch.utils.data import Dataset
+import torchvision.transforms as T
+
+class CustomCrack(Dataset):
+    def __init__(self, root, split="train", ignore_label=255, mean_bgr=(104.008, 116.669, 122.675), 
+                 augment=False, base_size=None, crop_size=None, scales=None, flip=False):
+        self.root = root
+        self.split = split
+        self.ignore_label = ignore_label
+        self.mean_bgr = mean_bgr
+        self.augment = augment
+        self.base_size = base_size
+        self.crop_size = crop_size
+        self.scales = scales if scales else [1.0]
+        self.flip = flip
+
+        list_path = os.path.join("/content/deeplab-pytorch/data", f"{split}.txt")
+        with open(list_path, "r") as f:
+            self.files = [line.strip().split() for line in f]
+
+    def __getitem__(self, index):
+        img_path, lbl_path = self.files[index]
+        img_path = os.path.join(self.root, img_path)
+        lbl_path = os.path.join(self.root, lbl_path)
+
+        img = Image.open(img_path).convert("RGB")
+        lbl = Image.open(lbl_path)
+
+        if self.augment:
+            img, lbl = self._augment(img, lbl)
+        else:
+            img = T.ToTensor()(img)
+            img = T.Normalize(mean=[m/255 for m in self.mean_bgr], std=[1, 1, 1])(img)
+            lbl = torch.from_numpy(np.array(lbl, dtype=np.uint8))
+
+        return os.path.basename(img_path).split(".")[0], img, lbl
+
+    def _augment(self, img, lbl):
+        scale = np.random.choice(self.scales)
+        size = (int(self.base_size * scale), int(self.base_size * scale))
+        img = img.resize(size, Image.BILINEAR)
+        lbl = lbl.resize(size, Image.NEAREST)
+
+        if self.flip and np.random.rand() > 0.5:
+            img = img.transpose(Image.FLIP_LEFT_RIGHT)
+            lbl = lbl.transpose(Image.FLIP_LEFT_RIGHT)
+
+        if self.crop_size:
+            w, h = img.size
+            x = np.random.randint(0, max(0, w - self.crop_size)) if w > self.crop_size else 0
+            y = np.random.randint(0, max(0, h - self.crop_size)) if h > self.crop_size else 0
+            img = img.crop((x, y, x + self.crop_size, y + self.crop_size))
+            lbl = lbl.crop((x, y, x + self.crop_size, y + self.crop_size))
+
+        img = T.ToTensor()(img)
+        img = T.Normalize(mean=[m/255 for m in self.mean_bgr], std=[1, 1, 1])(img)
+        lbl = torch.from_numpy(np.array(lbl, dtype=np.uint8))
+        return img, lbl
+
+    def __len__(self):
+        return len(self.files)

@@ -1,0 +1,49 @@
+import os
+
+# Đường dẫn gốc đến dữ liệu
+data_root = "/content/weakly-sup-crackdet/models/deeplab/research/deeplab/datasets/data"
+anno_types = ["detailed", "rough", "rougher", "dil1", "dil2", "dil3", "dil4"]
+datasets = ["aigle", "cfd", "deepcrack"]
+
+# Tạo thư mục để lưu train.txt
+os.makedirs("/content/deeplab-pytorch/data", exist_ok=True)
+
+# Các định dạng file hỗ trợ
+valid_extensions = [".png", ".jpg"]  # Ưu tiên .png cho ảnh
+
+# Tạo file train.txt
+with open("/content/deeplab-pytorch/data/train.txt", "w") as f:
+    for dataset in datasets:
+        for anno_type in anno_types:
+            dataset_dir = os.path.join(data_root, f"{dataset}_{anno_type}")
+            print(f"Kiểm tra thư mục: {dataset_dir}")
+            if os.path.exists(dataset_dir):
+                img_dir = os.path.join(dataset_dir, "img")
+                lbl_dir = os.path.join(dataset_dir, "lbl")
+                print(f"  img_dir: {img_dir}, lbl_dir: {lbl_dir}")
+                if os.path.exists(img_dir) and os.path.exists(lbl_dir):
+                    # Lấy danh sách file ảnh, ưu tiên .png
+                    img_files = [f for f in os.listdir(img_dir) if f.lower().endswith(".png")]
+                    if not img_files:  # Nếu không có .png, thử .jpg
+                        img_files = [f for f in os.listdir(img_dir) if f.lower().endswith(".jpg")]
+                    print(f"  Tìm thấy {len(img_files)} file ảnh trong {img_dir}")
+                    for img_name in img_files:
+                        img_path = os.path.join(f"{dataset}_{anno_type}/img", img_name)
+                        base_name = os.path.splitext(img_name)[0]
+                        # Tìm nhãn tương ứng
+                        for ext in valid_extensions:
+                            lbl_name = f"{base_name}{ext}"
+                            lbl_path = os.path.join(f"{dataset}_{anno_type}/lbl", lbl_name)
+                            full_lbl_path = os.path.join(data_root, lbl_path)
+                            if os.path.exists(full_lbl_path):
+                                f.write(f"{img_path} {lbl_path}\n")
+                                break
+                        else:
+                            print(f"  Cảnh báo: Không tìm thấy nhãn cho {img_path}")
+                else:
+                    print(f"  Không tìm thấy img hoặc lbl trong {dataset_dir}")
+            else:
+                print(f"  Thư mục {dataset_dir} không tồn tại")
+
+# Kiểm tra nội dung train.txt
+!cat /content/deeplab-pytorch/data/train.txt

@@ -1,0 +1,38 @@
+%%writefile /content/deeplab-pytorch/config.yaml
+EXP:
+  OUTPUT_DIR: /content/deeplab-pytorch/outputs
+  ID: crack_detection
+MODEL:
+  NAME: DeepLabV2_ResNet101_MSC
+  INIT_MODEL: /content/resnet101_imagenet.pth
+DATASET:
+  NAME: custom_crack
+  ROOT: /content/weakly-sup-crackdet/models/deeplab/research/deeplab/datasets/data/
+  SPLIT:
+    TRAIN: train
+  N_CLASSES: 2
+  IGNORE_LABEL: 255
+  SCALES: [0.5, 0.75, 1.0, 1.25, 1.5]
+IMAGE:
+  MEAN:
+    B: 104.008
+    G: 116.669
+    R: 122.675
+  SIZE:
+    BASE: 512
+    TRAIN: 512
+SOLVER:
+  BATCH_SIZE:
+    TRAIN: 4  # Giảm từ 8 xuống 4
+  LR: 0.005
+  WEIGHT_DECAY: 0.0001
+  MOMENTUM: 0.9
+  LR_DECAY: 5000
+  ITER_MAX: 20000
+  ITER_SIZE: 1
+  ITER_TB: 100
+  ITER_SAVE: 5000
+  POLY_POWER: 0.9
+  AVERAGE_LOSS: 20
+DATALOADER:
+  NUM_WORKERS: 2

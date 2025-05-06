@@ -1,0 +1,13 @@
+%%writefile /content/deeplab-pytorch/libs/datasets/__init__.py
+from .voc import VOC, VOCAug
+from .cocostuff import CocoStuff10k, CocoStuff164k
+from .custom_crack import CustomCrack
+
+def get_dataset(name):
+    return {
+        "cocostuff10k": CocoStuff10k,
+        "cocostuff164k": CocoStuff164k,
+        "voc": VOC,
+        "vocaug": VOCAug,
+        "custom_crack": CustomCrack,
+    }[name]

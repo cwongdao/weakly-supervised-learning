@@ -1,0 +1,50 @@
+* cai dat 
+!git clone --recursive https://github.com/hitachi-rd-cv/weakly-sup-crackdet.git
+* update module
+thêm dominate bằng pip
+* tai rgb images va precise annotations
+thuc hien tu download.sh
+* tai low quality annotations tu weakly sup crackdet dataset
+* pascal voc seg
+* data_gen.py --fill
+sửa các lệnh từ thư viện cũ trong thư mục tools, deeplab, deeplab/scripts dùng file code sửa lệnh
+* setup_models.sh
+* cấp quyền thực thi
+!chmod +x scripts/*.sh
+* chạy deepcrack
+!python tools/data_gen.py --deepcrack --anno_type detailed rough rougher 1 2 3 4 --dataset_name all
+* chạy deeplab
+- dùng pytorch
+!git clone --recursive https://github.com/kazuto1011/deeplab-pytorch
+- cập nhật module
+!pip install omegaconf torchnet joblib tqdm
+- Tải pretrained ResNet-101
+import torch
+import torchvision.models as models
+resnet101 = models.resnet101(pretrained=True)
+torch.save(resnet101.state_dict(), "/content/resnet101_imagenet.pth")
+- tạo train.txt
+- tạo config.yaml
+- tạo custom_crack.py
+- cập nhật init.py
+- cài module pydensecrf tại local
+!git clone https://github.com/lucasb-eyer/pydensecrf.git
+%cd pydensecrf
+!python setup.py build_ext --inplace
+!python setup.py install
+- restart runtime
+- thêm dường dẫn cho module
+import sys
+sys.path.append("/content/pydensecrf")
+- sửa main của pytorch
+- chạy huấn luyện
+%cd /content/deeplab-pytorch
+!python main.py train --config-path config.yaml --cuda
+* đánh giá
+- tạo val.txt
+- sửa custom_crack.py
+- sửa main.py
+- chạy code từ evalute_deeplab.py
+- Micro Branch
++ dùng main cuối.txt
++ chạy code từ eval.py

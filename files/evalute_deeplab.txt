@@ -1,0 +1,96 @@
+import os
+import numpy as np
+from PIL import Image
+from sklearn.metrics import f1_score, recall_score, precision_score
+import pandas as pd
+
+def load_image(path):
+    """Read image and convert to numpy array."""
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Image not found: {path}")
+    img = Image.open(path).convert('L')  # Convert to grayscale
+    return np.array(img)
+
+def binarize_image(img, threshold):
+    """Binarize image based on threshold."""
+    return (img >= threshold).astype(np.uint8)
+
+def calculate_metrics(pred, gt, ignore_label=255):
+    """Calculate F1-score, recall, precision, ignoring ignore_label."""
+    valid_mask = gt != ignore_label
+    pred = pred[valid_mask].flatten()
+    gt = gt[valid_mask].flatten()
+    if len(pred) == 0 or len(gt) == 0:
+        return 0.0, 0.0, 0.0
+    f1 = f1_score(gt, pred, average='binary', pos_label=1)
+    recall = recall_score(gt, pred, average='binary', pos_label=1)
+    precision = precision_score(gt, pred, average='binary', pos_label=1)
+    return f1, recall, precision
+
+def evaluate_dataset(test_list_path, pred_dir, gt_dir, thresholds=[0.5, 0.6, 0.7, 0.8, 0.9]):
+    """Evaluate on the entire test set."""
+    results = []
+    with open(test_list_path, 'r') as f:
+        lines = f.readlines()
+    
+    for threshold in thresholds:
+        f1_scores, recalls, precisions = [], [], []
+        for line in lines:
+            img_name, gt_name = line.strip().split()
+            # Extract base name from img_name
+            base_name = os.path.basename(img_name).split('.')[0]
+            pred_path = os.path.join(pred_dir, f"{base_name}_pred.png")
+            gt_path = os.path.join(gt_dir, gt_name)
+            
+            # Debug: In đường dẫn để kiểm tra
+            print(f"Attempting to load prediction: {pred_path}")
+            print(f"Attempting to load ground truth: {gt_path}")
+            
+            # Load prediction and ground truth
+            pred = load_image(pred_path)
+            gt = load_image(gt_path)
+            
+            # Binarize prediction
+            pred_bin = binarize_image(pred, threshold * 255)  # Assume heatmap in [0, 255]
+            
+            # Calculate metrics
+            f1, recall, precision = calculate_metrics(pred_bin, gt)
+            f1_scores.append(f1)
+            recalls.append(recall)
+            precisions.append(precision)
+        
+        # Calculate mean Macro F1-score
+        mean_f1 = np.mean(f1_scores)
+        mean_recall = np.mean(recalls)
+        mean_precision = np.mean(precisions)
+        results.append({
+            'threshold': threshold,
+            'f1_score': mean_f1,
+            'recall': mean_recall,
+            'precision': mean_precision
+        })
+    
+    return results
+
+def save_results_to_csv(results, output_csv):
+    """Save results to CSV file."""
+    df = pd.DataFrame(results)
+    df.to_csv(output_csv, index=False)
+
+# Configuration
+test_list_path = '/kaggle/working/deeplab-pytorch/data/val.txt'
+pred_dir = '/kaggle/working/deeplab-pytorch/outputs/predictions/crack_detection/deeplabv2_resnet101_msc/val'
+gt_dir = '/kaggle/working/weakly-sup-crackdet/models/deeplab/research/deeplab/datasets/data'
+output_csv = '/kaggle/working/deeplab_results.csv'
+thresholds = [0.5, 0.6, 0.7, 0.8, 0.9]
+
+# Debug: Kiểm tra thư mục pred_dir
+if not os.path.exists(pred_dir):
+    print(f"Prediction directory does not exist: {pred_dir}")
+else:
+    print(f"Prediction directory contents: {os.listdir(pred_dir)}")
+
+# Evaluate
+results = evaluate_dataset(test_list_path, pred_dir, gt_dir, thresholds)
+save_results_to_csv(results, output_csv)
+print(f"Results saved to {output_csv}")

@@ -1,0 +1,40 @@
+import os
+import collections
+
+# Đường dẫn tới thư mục chứa các file .py
+directory = "/content/weakly-sup-crackdet/tools"
+
+# Kiểm tra xem thư mục có tồn tại không
+if not os.path.exists(directory):
+    print(f"Thư mục {directory} không tồn tại!")
+else:
+    # Duyệt qua tất cả các file trong thư mục
+    for filename in os.listdir(directory):
+        if filename.endswith(".py"):  # Chỉ xử lý các file .py
+            filepath = os.path.join(directory, filename)
+            try:
+                # Đọc nội dung file
+                with open(filepath, 'r', encoding='utf-8') as file:
+                    content = file.read()
+
+                # Thực hiện các thay thế
+                new_content = content
+                new_content = new_content.replace("tf.gfile", "tf.compat.v1.gfile")
+                new_content = new_content.replace("tf.placeholder", "tf.compat.v1.placeholder")
+                new_content = new_content.replace("tf.Session", "tf.compat.v1.Session")
+                new_content = new_content.replace("tf.python_io.TFRecordWriter", "tf.io.TFRecordWriter")
+                new_content = new_content.replace("collections.Iterable", "collections.abc.Iterable")
+                new_content = new_content.replace("tf.GraphDef", "tf.compat.v1.GraphDef")
+                new_content = new_content.replace("tf.ConfigProto", "tf.compat.v1.ConfigProto")
+                new_content = new_content.replace("tf.app", "tf.compat.v1.app")
+
+                # Nếu có thay đổi, ghi lại file
+                if new_content != content:
+                    with open(filepath, 'w', encoding='utf-8') as file:
+                        file.write(new_content)
+                    print(f"Đã sửa file: {filename}")
+                else:
+                    print(f"Không có thay đổi trong file: {filename}")
+            except Exception as e:
+                print(f"Lỗi khi xử lý file {filename}: {str(e)}")
+    print("Hoàn tất việc sửa các file!")
